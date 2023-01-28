@@ -57,7 +57,11 @@ def get_thing():
 
 
 def socket_output_stream_wrapper_factory(output_stream):
-    class OutputStreamToSocket():
+    """Returns a class that acts as an stdout/stderr wrapper
+    that sends messages as a json payload over the output stream"""
+
+    class JsonPayloadOutputStreamWrapper():
+        """Instantiate with name of the stream (stdout or stderr)"""
         def __init__(self, stream_name):
             self.__output_stream = output_stream
             self.__stream_name = stream_name
@@ -72,7 +76,7 @@ def socket_output_stream_wrapper_factory(output_stream):
 
         def flush(self):  # pylint: disable=missing-function-docstring
             self.__output_stream.flush()
-    return OutputStreamToSocket
+    return JsonPayloadOutputStreamWrapper
 
 
 class Handler(StreamRequestHandler):
