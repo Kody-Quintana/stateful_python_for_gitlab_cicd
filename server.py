@@ -108,41 +108,38 @@ class Handler(StreamRequestHandler):
 
             # Note that for readline to work, the client sends a json string with a newline added to the end
             message_from_client = self.rfile.readline().decode('utf-8').strip()
+            if not message_from_client:
+                return
+            try:
+                msg_index, msg_length = 0, len(message_from_client) - 1
+                while msg_index < msg_length:
+                    msg_object, msg_index = json.JSONDecoder().raw_decode(message_from_client, msg_index)
 
-            if message_from_client:
-                try:
-                    msg_index, msg_length = 0, len(message_from_client) - 1
-                    while msg_index < msg_length:
-                        msg_object, msg_index = json.JSONDecoder().raw_decode(message_from_client, msg_index)
+                    # Handle special case of shutting the server down:
+                    if msg_object.get('function') == 'exit':
+                        print(f"Shutting down {os.path.basename(__file__)}")
+                        self.tell_client_to_exit(0)
+                        self.clean_exit()
 
-                        # Handle special case of shutting the server down:
-                        if msg_object.get('function') == 'exit':
+                    else:
+                        try:
+                            SERVER_ENTRY_POINT.run(*[msg_object[x] for x in ["function", "args"]])
+                            return_value = 0
+                        except Exception:  # pylint: disable=broad-except
+                            print(traceback.format_exc(), file=sys.stderr)
+                            return_value = 1
+
+                        if return_value == 0:
+                            self.tell_client_to_exit(return_value)
+                        else:
                             print(f"Shutting down {os.path.basename(__file__)}")
-                            self.tell_client_to_exit(0)
+                            self.tell_client_to_exit(return_value)
                             self.clean_exit()
 
-                        else:
-                            try:
-                                SERVER_ENTRY_POINT.run(*[msg_object[x] for x in ["function", "args"]])
-                                return_value = 0
-                            except Exception:  # pylint: disable=broad-except
-                                print(traceback.format_exc(), file=sys.stderr)
-                                return_value = 1
-
-                            if return_value == 0:
-                                self.tell_client_to_exit(return_value)
-                            else:
-                                print(f"Shutting down {os.path.basename(__file__)}")
-                                self.tell_client_to_exit(return_value)
-                                self.clean_exit()
-
-                except Exception:  # pylint: disable=broad-except
-                    print(traceback.format_exc(), file=sys.stderr)
-                    self.tell_client_to_exit(1)
-                    self.clean_exit(1)
-
-            else:  # If message is empty:
-                return
+            except Exception:  # pylint: disable=broad-except
+                print(traceback.format_exc(), file=sys.stderr)
+                self.tell_client_to_exit(1)
+                self.clean_exit(1)
 
 
 def main():  # pylint: disable=missing-function-docstring
