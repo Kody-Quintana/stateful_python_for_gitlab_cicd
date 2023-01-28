@@ -45,9 +45,8 @@ SERVER_ENTRY_POINT = ServerEntryPoints()
 @SERVER_ENTRY_POINT
 def set_thing(value):
     """example entry point where we create a global"""
-    global THING  # pylint: disable=global-variable-undefined
-    THING = value
-    print(f"global variable \"thing\" is now {value}")
+    globals()['THING'] = value
+    print(f"global variable \"THING\" is now {THING}")
 
 
 @SERVER_ENTRY_POINT
@@ -81,27 +80,27 @@ class Handler(StreamRequestHandler):
         that sends messages as a json payload over the output stream"""
 
         class JsonPayloadOutputStreamWrapper():
-            """Instantiate with name of the stream (stdout or stderr)"""
-            def __init__(self, stream_name):
-                self.__output_stream = output_stream
-                self.__stream_name = stream_name
+            """Instantiate with name of the function in the client"""
+            def __init__(self, client_function_name):
+                self._output_stream = output_stream
+                self._client_function_name = client_function_name
 
             def write(self, text):  # pylint: disable=missing-function-docstring
-                if len(text) == 0:
+                if text.strip() == '':
                     return
-                self.__output_stream.write(json.dumps({
-                    "function": f"print_server_{self.__stream_name}",
+                self._output_stream.write(json.dumps({
+                    "function": self._client_function_name,
                     "args": [text]
                 }).encode('utf-8'))
 
             def flush(self):  # pylint: disable=missing-function-docstring
-                self.__output_stream.flush()
+                self._output_stream.flush()
         return JsonPayloadOutputStreamWrapper
 
     def handle(self):
         # Send all output to client instead of having the server print it
-        OutputStreamToSocket = self.socket_output_stream_wrapper_factory(self.wfile)
-        sys.stdout, sys.stderr = [OutputStreamToSocket(x) for x in ['stdout', 'stderr']]
+        OutputStreamToClientFunc = self.socket_output_stream_wrapper_factory(self.wfile)
+        sys.stdout, sys.stderr = [OutputStreamToClientFunc(x) for x in ['print_server_stdout', 'print_server_stderr']]
 
         while True:  # pylint: disable=too-many-nested-blocks
 
