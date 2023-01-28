@@ -56,29 +56,6 @@ def get_thing():
     print(f"thing = {THING}")
 
 
-def socket_output_stream_wrapper_factory(output_stream):
-    """Returns a class that acts as an stdout/stderr wrapper
-    that sends messages as a json payload over the output stream"""
-
-    class JsonPayloadOutputStreamWrapper():
-        """Instantiate with name of the stream (stdout or stderr)"""
-        def __init__(self, stream_name):
-            self.__output_stream = output_stream
-            self.__stream_name = stream_name
-
-        def write(self, text):  # pylint: disable=missing-function-docstring
-            if len(text) == 0:
-                return
-            self.__output_stream.write(json.dumps({
-                "function": f"print_server_{self.__stream_name}",
-                "args": [text]
-            }).encode('utf-8'))
-
-        def flush(self):  # pylint: disable=missing-function-docstring
-            self.__output_stream.flush()
-    return JsonPayloadOutputStreamWrapper
-
-
 class Handler(StreamRequestHandler):
     """For use with ThreadedUnixStreamServer to read in messages from the client and process them"""
 
@@ -98,10 +75,32 @@ class Handler(StreamRequestHandler):
         sys.stdout, sys.stderr = sys.__stdout__, sys.__stderr__
         sys.exit(exit_value)
 
-    def handle(self):
+    @staticmethod
+    def socket_output_stream_wrapper_factory(output_stream):
+        """Returns a class that acts as an stdout/stderr wrapper
+        that sends messages as a json payload over the output stream"""
 
+        class JsonPayloadOutputStreamWrapper():
+            """Instantiate with name of the stream (stdout or stderr)"""
+            def __init__(self, stream_name):
+                self.__output_stream = output_stream
+                self.__stream_name = stream_name
+
+            def write(self, text):  # pylint: disable=missing-function-docstring
+                if len(text) == 0:
+                    return
+                self.__output_stream.write(json.dumps({
+                    "function": f"print_server_{self.__stream_name}",
+                    "args": [text]
+                }).encode('utf-8'))
+
+            def flush(self):  # pylint: disable=missing-function-docstring
+                self.__output_stream.flush()
+        return JsonPayloadOutputStreamWrapper
+
+    def handle(self):
         # Send all output to client instead of having the server print it
-        OutputStreamToSocket = socket_output_stream_wrapper_factory(self.wfile)
+        OutputStreamToSocket = self.socket_output_stream_wrapper_factory(self.wfile)
         sys.stdout, sys.stderr = [OutputStreamToSocket(x) for x in ['stdout', 'stderr']]
 
         while True:  # pylint: disable=too-many-nested-blocks
@@ -137,7 +136,8 @@ class Handler(StreamRequestHandler):
                     print(traceback.format_exc(), file=sys.stderr)
                     self.tell_client_to_exit(1)
                     self.clean_shutdown(1)
-            else:
+
+            else:  # If message is empty:
                 return
 
 
