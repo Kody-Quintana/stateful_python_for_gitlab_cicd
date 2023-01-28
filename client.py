@@ -70,11 +70,11 @@ def main():  # pylint: disable=missing-function-docstring
                     try:
                         # Client may receive several json strings concatenated into one
                         # so here we use raw_decode to iterate over the json strings
-                        msg_index, msg_length = 0, len(message_from_server) - 1
-                        while msg_index < msg_length:
-                            msg_object, msg_index = json.JSONDecoder().raw_decode(message_from_server, msg_index)
+                        msg_pos, msg_last = 0, len(message_from_server) - 1
+                        while msg_pos < msg_last:
+                            request_from_server, msg_pos = json.JSONDecoder().raw_decode(message_from_server, msg_pos)
 
-                            CLIENT_ENTRY_POINT.run(*[msg_object[x] for x in ["function", "args"]])
+                            CLIENT_ENTRY_POINT.run(*[request_from_server[x] for x in ["function", "args"]])
 
                     except json.decoder.JSONDecodeError as exception:
                         print(exception)
