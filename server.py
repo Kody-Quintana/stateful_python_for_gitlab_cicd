@@ -29,7 +29,7 @@ class ServerEntryPoints():
         if func_name in self._valid_entry_points:
             return self._valid_entry_points[func_name](*args)
 
-        error_message = f"""\"{func_name}\" not a valid entry point.
+        error_message = f"""\"{func_name}\" is not a valid entry point function.
 
 Remember to first decorate those functions with @SERVER_ENTRY_POINT like this:
 
@@ -127,11 +127,13 @@ class Handler(StreamRequestHandler):
                                 print(traceback.format_exc(), file=sys.stderr)
                                 return_value = 1
 
-                            if return_value != 0:
+                            if return_value == 0:
+                                self.tell_client_to_exit(return_value)
+                            else:
                                 print(f"Shutting down {os.path.basename(__file__)}")
-                            self.tell_client_to_exit(return_value)
-                            if return_value != 0:
+                                self.tell_client_to_exit(return_value)
                                 self.clean_shutdown()
+
                 except Exception:  # pylint: disable=broad-except
                     print(traceback.format_exc(), file=sys.stderr)
                     self.tell_client_to_exit(1)
