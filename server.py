@@ -70,7 +70,7 @@ class Handler(StreamRequestHandler):
         }).encode('utf-8'))
         self.wfile.flush()
 
-    def clean_shutdown(self, exit_value=0):
+    def clean_exit(self, exit_value=0):
         """Restore stdout & stderr before shutting down otherwise it will try to send a message after closing the socket"""
         sys.stdout, sys.stderr = sys.__stdout__, sys.__stderr__
         sys.exit(exit_value)
@@ -118,7 +118,7 @@ class Handler(StreamRequestHandler):
                         if msg_object.get('function') == 'exit':
                             print(f"Shutting down {os.path.basename(__file__)}")
                             self.tell_client_to_exit(0)
-                            self.clean_shutdown()
+                            self.clean_exit()
                         else:
                             try:
                                 SERVER_ENTRY_POINT.run(*[msg_object.get(x) for x in ["function", "args"]])
@@ -132,12 +132,12 @@ class Handler(StreamRequestHandler):
                             else:
                                 print(f"Shutting down {os.path.basename(__file__)}")
                                 self.tell_client_to_exit(return_value)
-                                self.clean_shutdown()
+                                self.clean_exit()
 
                 except Exception:  # pylint: disable=broad-except
                     print(traceback.format_exc(), file=sys.stderr)
                     self.tell_client_to_exit(1)
-                    self.clean_shutdown(1)
+                    self.clean_exit(1)
 
             else:  # If message is empty:
                 return
