@@ -80,7 +80,7 @@ class Handler(StreamRequestHandler):
         that sends messages as a json payload over the output stream"""
 
         class JsonPayloadOutputStreamWrapper():
-            """Instantiate with name of the function in the client"""
+            """Instantiate with name of the function in the client that will handle the text"""
             def __init__(self, client_function_name):
                 self._output_stream = output_stream
                 self._client_function_name = client_function_name
@@ -88,6 +88,8 @@ class Handler(StreamRequestHandler):
             def write(self, text):  # pylint: disable=missing-function-docstring
                 if text.strip() == '':
                     return
+                # Unlike the client, here we don't need the trailing newline
+                # because the client just recv's from the socket instead of using readline
                 self._output_stream.write(json.dumps({
                     "function": self._client_function_name,
                     "args": [text]
@@ -118,9 +120,10 @@ class Handler(StreamRequestHandler):
                             print(f"Shutting down {os.path.basename(__file__)}")
                             self.tell_client_to_exit(0)
                             self.clean_exit()
+
                         else:
                             try:
-                                SERVER_ENTRY_POINT.run(*[msg_object.get(x) for x in ["function", "args"]])
+                                SERVER_ENTRY_POINT.run(*[msg_object[x] for x in ["function", "args"]])
                                 return_value = 0
                             except Exception:  # pylint: disable=broad-except
                                 print(traceback.format_exc(), file=sys.stderr)

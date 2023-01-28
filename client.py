@@ -74,7 +74,7 @@ def main():  # pylint: disable=missing-function-docstring
                         while msg_index < msg_length:
                             msg_object, msg_index = json.JSONDecoder().raw_decode(message_from_server, msg_index)
 
-                            CLIENT_ENTRY_POINT.run(*[msg_object.get(x) for x in ["function", "args"]])
+                            CLIENT_ENTRY_POINT.run(*[msg_object[x] for x in ["function", "args"]])
 
                     except json.decoder.JSONDecodeError as exception:
                         print(exception)
