@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
 
 """
-Creates a local unix socket to allow for a client to request for this script to run any function decorated with the SERVER_ENTRY_POINT decorator.
-stdout and stderr are sent back to the client for it to handle.
+This script creates a local unix socket to allow for a client script to request the server to run any function decorated with the SERVER_ENTRY_POINT decorator.
+All stdout and stderr are sent back to the client for it to display.
 This script (the server) stays running until explicitly asked to exit or if an error occurs.
 
 The idea is that you can more easily see the high level logic of steps in something like a GitLab cicd yaml file
-as if they were separate commands but since the server runs continuously in the background you can maintain state in the python script.
+as if they were separate commands, but since this server script runs continuously in the background, you can maintain state in the python script.
 """
 
 from socketserver import UnixStreamServer, StreamRequestHandler
@@ -52,6 +52,15 @@ Currently valid entry points are:
 SERVER_ENTRY_POINT = ServerEntryPoints()
 
 
+#   ____  ______ _____ _____ _   _     ______ _   _ _______ _______     __    _____   ____ _____ _   _ _______ _____
+#  |  _ \|  ____/ ____|_   _| \ | |   |  ____| \ | |__   __|  __ \ \   / /   |  __ \ / __ \_   _| \ | |__   __/ ____|
+#  | |_) | |__ | |  __  | | |  \| |   | |__  |  \| |  | |  | |__) \ \_/ /    | |__) | |  | || | |  \| |  | | | (___
+#  |  _ <|  __|| | |_ | | | | . ` |   |  __| | . ` |  | |  |  _  / \   /     |  ___/| |  | || | | . ` |  | |  \___ \
+#  | |_) | |___| |__| |_| |_| |\  |   | |____| |\  |  | |  | | \ \  | |      | |    | |__| || |_| |\  |  | |  ____) |
+#  |____/|______\_____|_____|_| \_|   |______|_| \_|  |_|  |_|  \_\ |_|      |_|     \____/_____|_| \_|  |_| |_____/
+#
+
+
 @SERVER_ENTRY_POINT
 def set_thing(value):
     """example entry point where we create a global"""
@@ -63,6 +72,15 @@ def set_thing(value):
 def get_thing():
     """another example entry point where we read the new global from the first example"""
     print(f"THING = \"{THING}\"")
+
+
+#   ______ _   _ _____      ______ _   _ _______ _______     __    _____   ____ _____ _   _ _______ _____
+#  |  ____| \ | |  __ \    |  ____| \ | |__   __|  __ \ \   / /   |  __ \ / __ \_   _| \ | |__   __/ ____|
+#  | |__  |  \| | |  | |   | |__  |  \| |  | |  | |__) \ \_/ /    | |__) | |  | || | |  \| |  | | | (___
+#  |  __| | . ` | |  | |   |  __| | . ` |  | |  |  _  / \   /     |  ___/| |  | || | | . ` |  | |  \___ \
+#  | |____| |\  | |__| |   | |____| |\  |  | |  | | \ \  | |      | |    | |__| || |_| |\  |  | |  ____) |
+#  |______|_| \_|_____/    |______|_| \_|  |_|  |_|  \_\ |_|      |_|     \____/_____|_| \_|  |_| |_____/
+#
 
 
 class Handler(StreamRequestHandler):
