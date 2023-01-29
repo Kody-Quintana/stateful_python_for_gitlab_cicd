@@ -44,7 +44,7 @@ Remember to first decorate those functions with @SERVER_ENTRY_POINT like this:
 def my_entry_point():
     do something here...
 
-Currently valid entry points are:
+Current valid entry points are:
 {valid_entry_point_functions_str}"""
         raise NameError(error_message)
 
