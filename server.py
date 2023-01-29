@@ -5,8 +5,8 @@ This script creates a local unix socket to allow for a client script to request 
 All stdout and stderr are sent back to the client for it to display.
 This script (the server) stays running until explicitly asked to exit or if an error occurs.
 
-The idea is that you can more easily see the high level logic of steps in something like a GitLab cicd yaml file
-as if they were separate commands, but since this server script runs continuously in the background, you can maintain state in the python script.
+The idea is that you can more easily see high level logic of steps in something like a GitLab cicd yaml file or a shell script
+as if they were separate processes, but since this server script runs continuously in the background, you can maintain state in the python script.
 """
 
 from socketserver import UnixStreamServer, StreamRequestHandler
