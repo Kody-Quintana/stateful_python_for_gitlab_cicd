@@ -181,7 +181,7 @@ def main():  # pylint: disable=missing-function-docstring
     except Exception:  # pylint: disable=broad-except
         pass
 
-    print(f"Creating socket at {SOCKET_NAME}")
+    print(f"[{os.path.basename(__file__)}]: Creating socket at {SOCKET_NAME}")
     with UnixStreamServer(SOCKET_NAME, Handler) as server:
         server.serve_forever()
 

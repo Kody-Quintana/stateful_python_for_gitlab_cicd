@@ -73,7 +73,7 @@ def main():  # pylint: disable=missing-function-docstring
                 except ConnectionRefusedError:
                     connection_attempts += 1
                     if connection_attempts < 10:
-                        print(f"Waiting for {SOCKET_NAME}")
+                        print(f"[{os.path.basename(__file__)}]: Waiting for {SOCKET_NAME}")
                         time.sleep(1)
                         continue
                     print(f"Couldn't connect after {connection_attempts} attempts", file=sys.stderr)
