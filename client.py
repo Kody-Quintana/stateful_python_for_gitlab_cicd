@@ -41,15 +41,13 @@ CLIENT_ENTRY_POINT = ClientEntryPoints()
 @CLIENT_ENTRY_POINT
 def print_server_stdout(text):
     """Display messages from the server"""
-    for line in text.split("\n"):
-        print(f"[Daemon msg]: {line}", file=sys.stdout)
+    print(text, end='', file=sys.stdout)
 
 
 @CLIENT_ENTRY_POINT
 def print_server_stderr(text):
     """Display errors from the server"""
-    for line in text.split("\n"):
-        print(f"[Daemon err]: {line}", file=sys.stderr)
+    print(text, end='', file=sys.stderr)
 
 
 @CLIENT_ENTRY_POINT

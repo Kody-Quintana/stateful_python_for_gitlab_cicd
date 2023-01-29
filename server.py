@@ -113,11 +113,10 @@ class Handler(StreamRequestHandler):
                 self._output_stream = output_stream
                 self._client_function_name = client_function_name
 
-            def write(self, text):  # pylint: disable=missing-function-docstring
-                if text.strip() == '':
-                    return
-                # Unlike the client, here we don't need to send a trailing newline
-                # because the client just recv's from the socket instead of using readline
+            def write(self, text):
+                """Encode message into json and send to client.
+                No trailing newline required because the client just recv's from the socket instead of using readline.
+                """
                 self._output_stream.write(json.dumps({
                     "function_name": self._client_function_name,
                     "args": [text]
