@@ -1,6 +1,15 @@
 #!/usr/bin/env python3
 
+"""
+This client requests the server to run a function matching the name of the first argument to this script,
+the rest of the command line arguments are sent as arguments to that requested function in the server.
+
+While that function runs in the server, any stdout and stderr messages are sent back to this client to be displayed.
+When the function returns in the server, this client exits.
+"""
+
 import socket
+import time
 import json
 import sys
 
@@ -55,15 +64,32 @@ def main():  # pylint: disable=missing-function-docstring
 
     with socket.socket(socket.AF_UNIX, socket.SOCK_STREAM) as client:
         try:
-            client.connect(SOCKET_NAME)
 
+            # Connect to local unix socket
+            connection_attempts = 0
+            while True:
+                try:
+                    client.connect(SOCKET_NAME)
+                    break
+                except ConnectionRefusedError:
+                    connection_attempts += 1
+                    if connection_attempts < 10:
+                        print(f"Waiting for {SOCKET_NAME}")
+                        time.sleep(1)
+                        continue
+                    print(f"Couldn't connect after {connection_attempts} attempts", file=sys.stderr)
+                    sys.exit(1)
+
+            # Send argv as a json payload to the server.
             # Note the trailing newline, that is there so we can use readline() in the server
             client.sendall((json.dumps({
-                "function": sys.argv[1],
+                "function_name": sys.argv[1],
                 "args": [] if len(sys.argv) < 2 else sys.argv[2:]
             }) + "\n").encode('utf-8'))
 
+            # Continue reading from the server until _exit is requested from the server
             bufsize = 131072
+            json_decoder = json.JSONDecoder()
             while True:
                 message_from_server = client.recv(bufsize).strip().decode('utf-8')
                 if message_from_server:
@@ -72,9 +98,9 @@ def main():  # pylint: disable=missing-function-docstring
                         # so here we use raw_decode to iterate over the json strings
                         msg_pos, msg_last = 0, len(message_from_server) - 1
                         while msg_pos < msg_last:
-                            request_from_server, msg_pos = json.JSONDecoder().raw_decode(message_from_server, msg_pos)
+                            request_from_server, msg_pos = json_decoder.raw_decode(message_from_server, msg_pos)
 
-                            CLIENT_ENTRY_POINT.run(*[request_from_server[x] for x in ["function", "args"]])
+                            CLIENT_ENTRY_POINT.run(*[request_from_server[x] for x in ["function_name", "args"]])
 
                     except json.decoder.JSONDecodeError as exception:
                         print(exception)

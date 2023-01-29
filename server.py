@@ -1,6 +1,16 @@
 #!/usr/bin/env python3
 
+"""
+Creates a local unix socket to allow for a client to request for this script to run any function decorated with the SERVER_ENTRY_POINT decorator.
+stdout and stderr are sent back to the client for it to handle.
+This script (the server) stays running until explicitly asked to exit or if an error occurs.
+
+The idea is that you can more easily see the high level logic of steps in something like a GitLab cicd yaml file
+as if they were separate commands but since the server runs continuously in the background you can maintain state in the python script.
+"""
+
 from socketserver import UnixStreamServer, StreamRequestHandler
+from inspect import signature
 import traceback
 import json
 import sys
@@ -11,11 +21,7 @@ SOCKET_NAME = "/tmp/test"
 
 
 class ServerEntryPoints():
-    """Instantiate this class, then use that instance as a decorator for any functions that are to be used as an entry point.
-    The idea is that the "server" will run any functions that are called by the client, but since the server doesn't die
-    between those calls, the state of the python script (running as the server) is maintained.
-    So for example, if one entry point instantiated a global variable, other entry points could use that variable.
-    """
+    """Instantiate this class, then use that instance as a decorator for any functions that are to be used as an entry point."""
     def __init__(self):
         self._valid_entry_points = {}
 
@@ -29,13 +35,17 @@ class ServerEntryPoints():
         if func_name in self._valid_entry_points:
             return self._valid_entry_points[func_name](*args)
 
+        valid_entry_point_functions_str = '\n'.join("  • " + x[0] + str(signature(x[1])) for x in self._valid_entry_points.items())
         error_message = f"""\"{func_name}\" is not a valid entry point function.
 
 Remember to first decorate those functions with @SERVER_ENTRY_POINT like this:
 
 @SERVER_ENTRY_POINT
 def my_entry_point():
-    do something here..."""
+    do something here...
+
+Currently valid entry points are:
+{valid_entry_point_functions_str}"""
         raise NameError(error_message)
 
 
@@ -46,13 +56,13 @@ SERVER_ENTRY_POINT = ServerEntryPoints()
 def set_thing(value):
     """example entry point where we create a global"""
     globals()['THING'] = value
-    print(f"global variable \"THING\" is now {THING}")
+    print(f"global variable THING is now \"{THING}\"")
 
 
 @SERVER_ENTRY_POINT
 def get_thing():
     """another example entry point where we read the new global from the first example"""
-    print(f"thing = {THING}")
+    print(f"THING = \"{THING}\"")
 
 
 class Handler(StreamRequestHandler):
@@ -64,7 +74,7 @@ class Handler(StreamRequestHandler):
         client is blocking while the server runs the entry point function.
         """
         self.wfile.write(json.dumps({
-            "function": "_exit",  # Named _exit to avoid redefining builtin
+            "function_name": "_exit",  # Named _exit to avoid redefining builtin
             "args": [exit_code]
         }).encode('utf-8'))
         self.wfile.flush()
@@ -91,7 +101,7 @@ class Handler(StreamRequestHandler):
                 # Unlike the client, here we don't need the trailing newline
                 # because the client just recv's from the socket instead of using readline
                 self._output_stream.write(json.dumps({
-                    "function": self._client_function_name,
+                    "function_name": self._client_function_name,
                     "args": [text]
                 }).encode('utf-8'))
 
@@ -103,8 +113,9 @@ class Handler(StreamRequestHandler):
         # Send all output to client instead of having the server print it
         OutputStreamToClientFunc = self.socket_output_stream_wrapper_factory(self.wfile)
         sys.stdout, sys.stderr = [OutputStreamToClientFunc(x) for x in ['print_server_stdout', 'print_server_stderr']]
+        json_decoder = json.JSONDecoder()
 
-        while True:  # pylint: disable=too-many-nested-blocks
+        while True:
 
             # Note that for readline to work, the client sends a json string with a newline added to the end
             message_from_client = self.rfile.readline().decode('utf-8').strip()
@@ -113,17 +124,17 @@ class Handler(StreamRequestHandler):
             try:
                 msg_pos, msg_last = 0, len(message_from_client) - 1
                 while msg_pos < msg_last:
-                    request_from_client, msg_pos = json.JSONDecoder().raw_decode(message_from_client, msg_pos)
+                    request_from_client, msg_pos = json_decoder.raw_decode(message_from_client, msg_pos)
 
                     # Handle special case of shutting the server down:
-                    if request_from_client.get('function') == 'exit':
+                    if request_from_client.get('function_name') == 'exit':
                         print(f"Shutting down {os.path.basename(__file__)}")
                         self.tell_client_to_exit(0)
                         self.clean_exit()
 
                     else:
                         try:
-                            SERVER_ENTRY_POINT.run(*[request_from_client[x] for x in ["function", "args"]])
+                            SERVER_ENTRY_POINT.run(*[request_from_client[x] for x in ["function_name", "args"]])
                             return_value = 0
                         except Exception:  # pylint: disable=broad-except
                             print(traceback.format_exc(), file=sys.stderr)
@@ -152,6 +163,7 @@ def main():  # pylint: disable=missing-function-docstring
     except Exception:  # pylint: disable=broad-except
         pass
 
+    print(f"Creating socket at {SOCKET_NAME}")
     with UnixStreamServer(SOCKET_NAME, Handler) as server:
         server.serve_forever()
 
