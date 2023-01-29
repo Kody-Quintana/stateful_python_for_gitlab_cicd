@@ -105,7 +105,7 @@ class Handler(StreamRequestHandler):
     @staticmethod
     def socket_output_stream_wrapper_factory(output_stream):
         """Returns a class that acts as an stdout/stderr wrapper
-        that sends messages as a json payload over the output stream"""
+        that sends messages as a json payload to the client"""
 
         class JsonPayloadOutputStreamWrapper():
             """Instantiate with name of the function in the client that will handle the text"""
@@ -116,7 +116,7 @@ class Handler(StreamRequestHandler):
             def write(self, text):  # pylint: disable=missing-function-docstring
                 if text.strip() == '':
                     return
-                # Unlike the client, here we don't need the trailing newline
+                # Unlike the client, here we don't need to send a trailing newline
                 # because the client just recv's from the socket instead of using readline
                 self._output_stream.write(json.dumps({
                     "function_name": self._client_function_name,
@@ -152,6 +152,7 @@ class Handler(StreamRequestHandler):
 
                     else:
                         try:
+                            os.environ = request_from_client["env"]
                             SERVER_ENTRY_POINT.run(*[request_from_client[x] for x in ["function_name", "args"]])
                             return_value = 0
                         except Exception:  # pylint: disable=broad-except

@@ -12,6 +12,7 @@ import socket
 import time
 import json
 import sys
+import os
 
 SOCKET_NAME = "/tmp/test"
 
@@ -84,7 +85,8 @@ def main():  # pylint: disable=missing-function-docstring
             # Note the trailing newline, that is there so we can use readline() in the server
             client.sendall((json.dumps({
                 "function_name": sys.argv[1],
-                "args": [] if len(sys.argv) < 2 else sys.argv[2:]
+                "args": [] if len(sys.argv) < 2 else sys.argv[2:],
+                "env": dict(os.environ)
             }) + "\n").encode('utf-8'))
 
             # Continue reading from the server until _exit is requested from the server
