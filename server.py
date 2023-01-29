@@ -71,7 +71,7 @@ def set_thing(value):
 @SERVER_ENTRY_POINT
 def get_thing():
     """another example entry point where we read the new global from the first example"""
-    print(f"THING = \"{THING}\"")
+    print(THING)
 
 
 #   ______ _   _ _____      ______ _   _ _______ _______     __    _____   ____ _____ _   _ _______ _____
