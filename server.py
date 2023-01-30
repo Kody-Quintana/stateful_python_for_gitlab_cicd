@@ -158,7 +158,7 @@ class Handler(StreamRequestHandler):
                     except SystemExit as this_exit_signal:
                         print(f"Shutting down {os.path.basename(__file__)}")
                         self.tell_client_to_exit(this_exit_signal.code)
-                        self.clean_exit(this_exit_signal.code)
+                        self.clean_exit(0)
 
                     # An exception here likely means that something has gone wrong in an entry point function
                     except Exception:  # pylint: disable=broad-except
