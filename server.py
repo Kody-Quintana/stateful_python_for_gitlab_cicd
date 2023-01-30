@@ -76,6 +76,12 @@ def get_thing():
 
 
 @SERVER_ENTRY_POINT
+def print_env_var_foo():
+    """Example entry point to show that the client updates the server with its env every call"""
+    print(os.environ.get("foo"))
+
+
+@SERVER_ENTRY_POINT
 def exit(exit_code=0):  # pylint: disable=redefined-builtin
     """sys.exit can be used in any entry point function.
     A clean shutdown will be handled by catching the SystemExit exception."""
