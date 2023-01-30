@@ -98,7 +98,7 @@ def exit(exit_code=0):  # pylint: disable=redefined-builtin
 
 
 class Handler(StreamRequestHandler):
-    """For use with ThreadedUnixStreamServer to read in messages from the client and process them"""
+    """For use with UnixStreamServer to read in messages from the client and process them"""
 
     def tell_client_to_exit(self, exit_code):
         """
