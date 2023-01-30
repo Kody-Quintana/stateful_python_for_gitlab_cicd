@@ -71,7 +71,7 @@ def main():  # pylint: disable=missing-function-docstring
                 try:
                     client.connect(SOCKET_NAME)
                     break
-                except ConnectionRefusedError:
+                except (ConnectionRefusedError, FileNotFoundError):
                     connection_attempts += 1
                     if connection_attempts < 10:
                         print(f"[{os.path.basename(__file__)}]: Waiting for {SOCKET_NAME}")
