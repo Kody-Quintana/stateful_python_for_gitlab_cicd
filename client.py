@@ -3,6 +3,7 @@
 """
 This client requests the server to run a function matching the name of the first argument to this script,
 the rest of the command line arguments are sent as arguments to that requested function in the server.
+The server's env is updated to match the env of this client when this client makes a request.
 
 While that function runs in the server, any stdout and stderr messages are sent back to this client to be displayed.
 When the function returns in the server, this client exits.
