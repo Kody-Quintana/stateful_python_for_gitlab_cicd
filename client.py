@@ -74,9 +74,9 @@ def main():  # pylint: disable=missing-function-docstring
                     connection_attempts += 1
                     if connection_attempts < 10:
                         print(f"[{os.path.basename(__file__)}]: Waiting for {SOCKET_NAME}")
-                        time.sleep(1)
+                        time.sleep(connection_attempts * 0.1)
                         continue
-                    print(f"Couldn't connect after {connection_attempts} attempts", file=sys.stderr)
+                    print(f"[{os.path.basename(__file__)}]: Couldn't connect after {connection_attempts} attempts", file=sys.stderr)
                     sys.exit(1)
 
             # Send argv as a json payload to the server.

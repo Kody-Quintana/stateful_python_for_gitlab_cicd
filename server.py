@@ -10,6 +10,7 @@ as if they were separate processes, but since this server script runs continuous
 """
 
 from socketserver import UnixStreamServer, StreamRequestHandler
+from textwrap import dedent
 from inspect import signature
 import traceback
 import json
@@ -34,18 +35,17 @@ class ServerEntryPoints():
         """Ensure a function being requested by the client has been tagged (decorated) as a valid entry point"""
         if func_name in self._valid_entry_points:
             return self._valid_entry_points[func_name](*args)
+        error_message = dedent(f'''\
+            "{func_name}" is not a valid entry point function in {os.path.basename(__file__)}
 
-        valid_entry_point_functions_str = '\n'.join("  • " + x[0] + str(signature(x[1])) for x in self._valid_entry_points.items())
-        error_message = f"""\"{func_name}\" is not a valid entry point function.
+            Remember to first decorate those functions with @SERVER_ENTRY_POINT like this:
 
-Remember to first decorate those functions with @SERVER_ENTRY_POINT like this:
+            @SERVER_ENTRY_POINT
+            def my_entry_point():
+                do something here...
 
-@SERVER_ENTRY_POINT
-def my_entry_point():
-    do something here...
-
-Current valid entry points are:
-{valid_entry_point_functions_str}"""
+            Current valid entry points are:
+            ''') + '\n'.join(f"  • {x[0]}{signature(x[1])}" for x in self._valid_entry_points.items())
         raise NameError(error_message)
 
 
@@ -97,7 +97,7 @@ class Handler(StreamRequestHandler):
         }).encode('utf-8'))
         self.wfile.flush()
 
-    def clean_exit(self, exit_value=0):
+    def clean_exit(self, exit_value):
         """Restore stdout & stderr before shutting down otherwise it will try to send a message after closing the socket"""
         sys.stdout, sys.stderr = sys.__stdout__, sys.__stderr__
         sys.exit(exit_value)
@@ -115,8 +115,7 @@ class Handler(StreamRequestHandler):
 
             def write(self, text):
                 """Encode message into json and send to client.
-                No trailing newline required because the client just recv's from the socket instead of using readline.
-                """
+                No trailing newline required because the client just recv's from the socket instead of using readline."""
                 self._output_stream.write(json.dumps({
                     "function_name": self._client_function_name,
                     "args": [text]
@@ -133,7 +132,6 @@ class Handler(StreamRequestHandler):
         json_decoder = json.JSONDecoder()
 
         while True:
-
             # Note that for readline to work, the client sends a json string with a newline added to the end
             message_from_client = self.rfile.readline().decode('utf-8').strip()
             if not message_from_client:
@@ -142,31 +140,25 @@ class Handler(StreamRequestHandler):
                 msg_pos, msg_last = 0, len(message_from_client) - 1
                 while msg_pos < msg_last:
                     request_from_client, msg_pos = json_decoder.raw_decode(message_from_client, msg_pos)
-
                     # Handle special case of shutting the server down:
                     if request_from_client.get('function_name') == 'exit':
                         print(f"Shutting down {os.path.basename(__file__)}")
                         self.tell_client_to_exit(0)
-                        self.clean_exit()
-
+                        self.clean_exit(0)
                     else:
-                        try:
+                        try:  # Update the server's env to match the client's and run the requested function:
                             os.environ = request_from_client["env"]
                             SERVER_ENTRY_POINT.run(*[request_from_client[x] for x in ["function_name", "args"]])
-                            return_value = 0
+                            self.tell_client_to_exit(0)
                         except Exception:  # pylint: disable=broad-except
                             print(traceback.format_exc(), file=sys.stderr)
-                            return_value = 1
-
-                        if return_value == 0:
-                            self.tell_client_to_exit(return_value)
-                        else:
                             print(f"Shutting down {os.path.basename(__file__)}")
-                            self.tell_client_to_exit(return_value)
-                            self.clean_exit()
+                            self.tell_client_to_exit(1)
+                            self.clean_exit(0)
 
             except Exception:  # pylint: disable=broad-except
                 print(traceback.format_exc(), file=sys.stderr)
+                print(f"Shutting down {os.path.basename(__file__)}")
                 self.tell_client_to_exit(1)
                 self.clean_exit(1)
 
