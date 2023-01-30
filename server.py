@@ -65,13 +65,21 @@ SERVER_ENTRY_POINT = ServerEntryPoints()
 def set_thing(value):
     """example entry point where we create a global"""
     globals()['THING'] = value
-    print(f"global variable THING is now \"{THING}\"")
+    print(f"global variable THING is now \"{THING}\"")  # noqa  pylint: disable=undefined-variable
 
 
 @SERVER_ENTRY_POINT
 def get_thing():
     """another example entry point where we read the new global from the first example"""
-    print(THING)
+    print(THING)  # noqa  pylint: disable=undefined-variable
+    sys.exit(0)
+
+
+@SERVER_ENTRY_POINT
+def exit(exit_code=0):  # pylint: disable=redefined-builtin
+    """sys.exit can be used in any entry point function.
+    A clean shutdown will be handled by catching the SystemExit exception."""
+    sys.exit(exit_code)
 
 
 #   ______ _   _ _____      ______ _   _ _______ _______     __    _____   ____ _____ _   _ _______ _____
@@ -86,7 +94,7 @@ def get_thing():
 class Handler(StreamRequestHandler):
     """For use with ThreadedUnixStreamServer to read in messages from the client and process them"""
 
-    def tell_client_to_exit(self, exit_code=0):
+    def tell_client_to_exit(self, exit_code):
         """
         This is used after the requested entry point function finishes so that the
         client is blocking while the server runs the entry point function.
@@ -140,22 +148,26 @@ class Handler(StreamRequestHandler):
                 msg_pos, msg_last = 0, len(message_from_client) - 1
                 while msg_pos < msg_last:
                     request_from_client, msg_pos = json_decoder.raw_decode(message_from_client, msg_pos)
-                    # Handle special case of shutting the server down:
-                    if request_from_client.get('function_name') == 'exit':
-                        print(f"Shutting down {os.path.basename(__file__)}")
-                        self.tell_client_to_exit(0)
-                        self.clean_exit(0)
-                    else:
-                        try:  # Update the server's env to match the client's and run the requested function:
-                            os.environ = request_from_client["env"]
-                            SERVER_ENTRY_POINT.run(*[request_from_client[x] for x in ["function_name", "args"]])
-                            self.tell_client_to_exit(0)
-                        except Exception:  # pylint: disable=broad-except
-                            print(traceback.format_exc(), file=sys.stderr)
-                            print(f"Shutting down {os.path.basename(__file__)}")
-                            self.tell_client_to_exit(1)
-                            self.clean_exit(0)
 
+                    try:  # Update the server's env to match the client's and run the requested function:
+                        os.environ = request_from_client["env"]
+                        SERVER_ENTRY_POINT.run(*[request_from_client[x] for x in ["function_name", "args"]])
+                        self.tell_client_to_exit(0)
+
+                    # If an entry point function calls sys.exit it will be caught here:
+                    except SystemExit as this_exit_signal:
+                        print(f"Shutting down {os.path.basename(__file__)}")
+                        self.tell_client_to_exit(this_exit_signal.code)
+                        self.clean_exit(this_exit_signal.code)
+
+                    # An exception here likely means that something has gone wrong in an entry point function
+                    except Exception:  # pylint: disable=broad-except
+                        print(traceback.format_exc(), file=sys.stderr)
+                        print(f"Shutting down {os.path.basename(__file__)}")
+                        self.tell_client_to_exit(1)
+                        self.clean_exit(0)
+
+            # An exception here means something went wrong with the server boilerplate code
             except Exception:  # pylint: disable=broad-except
                 print(traceback.format_exc(), file=sys.stderr)
                 print(f"Shutting down {os.path.basename(__file__)}")
