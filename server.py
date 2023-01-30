@@ -18,7 +18,7 @@ import sys
 import os
 
 
-SOCKET_NAME = "/tmp/stateful-python-coordinator-socket"
+SOCKET_NAME = "./stateful-python-coordinator-socket"
 
 
 class ServerEntryPoints():
@@ -175,7 +175,10 @@ def main():  # pylint: disable=missing-function-docstring
 
     print(f"[{os.path.basename(__file__)}]: Creating socket at {SOCKET_NAME}")
     with UnixStreamServer(SOCKET_NAME, Handler) as server:
-        server.serve_forever()
+        try:
+            server.serve_forever()
+        finally:
+            os.remove(SOCKET_NAME)
 
 
 if __name__ == '__main__':

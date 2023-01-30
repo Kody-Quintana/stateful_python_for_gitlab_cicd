@@ -15,7 +15,7 @@ import sys
 import os
 
 
-SOCKET_NAME = "/tmp/stateful-python-coordinator-socket"
+SOCKET_NAME = "./stateful-python-coordinator-socket"
 
 
 class ClientEntryPoints():
