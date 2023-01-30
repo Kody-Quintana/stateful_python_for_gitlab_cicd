@@ -18,7 +18,7 @@ import sys
 import os
 
 
-SOCKET_NAME = "/tmp/test"
+SOCKET_NAME = "/tmp/stateful-python-coordinator-socket"
 
 
 class ServerEntryPoints():
