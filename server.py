@@ -49,6 +49,7 @@ class ServerEntryPoints():
         raise NameError(error_message)
 
 
+# Only instantiate this once
 SERVER_ENTRY_POINT = ServerEntryPoints()
 
 
@@ -167,7 +168,7 @@ class Handler(StreamRequestHandler):
                         self.tell_client_to_exit(1)
                         self.clean_exit(0)
 
-            # An exception here means something went wrong with the server boilerplate code
+            # An exception here means something went wrong with decoding the json payload from the client
             except Exception:  # pylint: disable=broad-except
                 print(traceback.format_exc(), file=sys.stderr)
                 print(f"Shutting down {os.path.basename(__file__)}")
