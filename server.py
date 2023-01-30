@@ -73,7 +73,6 @@ def set_thing(value):
 def get_thing():
     """another example entry point where we read the new global from the first example"""
     print(THING)  # noqa  pylint: disable=undefined-variable
-    sys.exit(0)
 
 
 @SERVER_ENTRY_POINT
