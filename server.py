@@ -14,6 +14,7 @@ from textwrap import dedent
 from inspect import signature
 import traceback
 import json
+import stat
 import sys
 import os
 
@@ -196,7 +197,8 @@ def main():  # pylint: disable=missing-function-docstring
         try:
             server.serve_forever()
         finally:
-            os.remove(SOCKET_NAME)
+            if stat.S_ISSOCK(os.stat(SOCKET_NAME).st_mode):
+                os.remove(SOCKET_NAME)
 
 
 if __name__ == '__main__':
